@@ -1,0 +1,110 @@
+import Hapi, { RequestEvent } from "@hapi/hapi"
+import http from "http"
+import { EitherAsync } from "purify-ts"
+import tracer from "tracer"
+import { CheckRateLimit } from "../rate-limiter/rate-limiter.js"
+import { StartRedis, StopRedis } from "../rate-limiter/rate-limiter.repository.js"
+import { GetTemperatureCache, SetTemperatureCache, TemperatureApi, WeatherValidation } from "../weather/weather.js"
+
+const logger = tracer.console();
+
+const server = Hapi.server(
+	{
+		port: 3000,
+		host: "localhost"
+	})
+
+
+const ip = (request: Hapi.Request) =>
+	request.headers['x-real-ip'] ||
+	request.info.remoteAddress;
+
+server.route({
+	method: "POST",
+	path: "/weather",
+	options: {
+		payload: {
+			allow: "application/json"
+		},
+	},
+	handler: async (request, h) => {
+		request.log("info", "new incoming request")
+
+		let result = await EitherAsync.liftEither(
+			WeatherValidation(request.payload))
+			.ifLeft(() => request.log("info", {
+				message: "validation failed with payload",
+				data: request.payload
+			}))
+			.ifRight(() => request.log("info", {
+				message: "payload validated",
+				data: request.payload
+			}))
+			.ifRight(() => request.log("info", {
+				message: "checking rate limit.",
+				ip: ip(request),
+			}))
+			.chain(x =>
+				CheckRateLimit(ip(request))
+					.ifRight(calls => request.log("info", { message: "api calls", calls }))
+					.map(_ => x))
+			.chain(x =>
+				EitherAsync.liftEither(GetTemperatureCache(x))
+					.ifLeft(() => request.log("info", "no data in cache the api will be used"))
+					.ifRight(x => request.log("info", { message: "got data from cache", data: x }))
+					.chainLeft(x => TemperatureApi(x)
+						.ifRight(() => request.log("info", "set the data in cache"))
+						.ifRight(SetTemperatureCache)
+					)
+			).run()
+
+		result.ifLeft(error => request.log("error", error.toLog()))
+
+		return result.map(data => ({ celcius: data.celcius, fahrenheit: data.fahrenheit }))
+	}
+})
+
+
+server.route({
+	method: '*',
+	path: '/{any*}',
+	handler: function (_, h) {
+		return h.response({ statusCode: 404, error: http.STATUS_CODES[404], message: "the path is not found" }).code(404);
+	}
+});
+
+const logMessage = (event: RequestEvent) => typeof event === "string" ? event : JSON.stringify({ request: (event as any).request, timestamp: event.timestamp, data: event.data })
+
+server.events.on('log', (event, tags) =>
+	logger[tags.info ? "info" : "error"](logMessage(event))
+);
+
+server.events.on('request', (_, event, tags) =>
+	logger[tags.info ? "info" : "error"](logMessage(event))
+);
+
+export async function ServerInit() {
+	await StartRedis()
+
+	await server.initialize()
+
+	return server
+}
+
+export async function ServerStart() {
+	await server.start()
+
+	server.start().then(() => server.log("server started on port 3000"))
+
+	return server
+}
+
+export async function ServerStop() {
+	await StopRedis()
+	await server.stop()
+
+	return server
+}
+
+
+

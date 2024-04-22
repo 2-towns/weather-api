@@ -1,0 +1,45 @@
+{
+  "name": "weather-api",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "A simple weather API for demo purpose ",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "compile": "tsc --noEmit",
+    "start": "node --watch dist/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "test:unit": "node --test ./dist/**/*.unit.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/2-towns/weather-api.git"
+  },
+  "keywords": [
+    "Node",
+    "Typescript",
+    "SQLite",
+    "Docker"
+  ],
+  "author": "Arnaud Deville",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/2-towns/weather-api/issues"
+  },
+  "homepage": "https://github.com/2-towns/weather-api#readme",
+  "dependencies": {
+    "@hapi/hapi": "^21.3.9",
+    "better-sqlite3": "^9.5.0",
+    "purify-ts": "^2.0.3",
+    "redis": "^4.6.13",
+    "tracer": "^1.3.0",
+    "znv": "^0.4.0",
+    "zod": "^3.22.5"
+  },
+  "devDependencies": {
+    "@tsconfig/node20": "^20.1.4",
+    "@types/better-sqlite3": "^7.6.9",
+    "@types/node": "^20.12.7"
+  }
+}
