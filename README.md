@@ -66,7 +66,7 @@ Run the migration (first time only):
 
 ```sh
 npm run migration  
-``
+```
 
 Start the server (in watching mode):
 
