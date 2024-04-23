@@ -10,8 +10,9 @@
     "compile": "tsc --noEmit",
     "migration": "node dist/db/migration.js",
     "start": "node --watch dist/index.js",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "test:unit": "node --test ./dist/**/*.unit.js"
+    "pretest":"npm run build",
+    "test": "node --test dist/",
+    "test:dev": "node --test dist/"
   },
   "repository": {
     "type": "git",
@@ -43,5 +44,8 @@
     "@types/better-sqlite3": "^7.6.9",
     "@types/node": "^20.12.7",
     "typescript": "^5.4.5"
+  },
+  "engines" : { 
+    "node" : ">=20"
   }
 }
