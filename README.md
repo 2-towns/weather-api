@@ -84,8 +84,8 @@ The success result is a JSON object containing the Celsius and Fahrenheit values
 
 ```json
 {
-    "celcius":	3.63,
-    "fahrenheit":	38.53
+    "celcius": 3.63,
+    "fahrenheit": 38.53
 }
 ```
 
@@ -119,7 +119,7 @@ npm run build
 
 I used functional programming with `purify-ts` for better error handling and to make the code easier to test. There is a pattern of left/right to return values, where left represents the "error" value and right represents the valid value. Additionally, I used `Maybe`, which allows managing nullable values.
 
-## Code organization 
+### Code organization 
 
 The code is organized by features because it's easier to focus on a specific feature. I used camelCase inside namespaces because I find it more comprehensible to import a namespace and call a function inside, rather than importing a function directly from another module.
 
