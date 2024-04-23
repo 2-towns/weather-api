@@ -35,14 +35,15 @@ server.route({
 				data: request.query
 			}))
 			.ifRight(() => request.log("info", {
-				message: "checking rate limit.",
+				message: "checking cache value.",
 				ip: ip(request),
 			}))
 			.chain(x =>
 				EitherAsync.liftEither(Temperature.getCache(x))
 					.ifLeft(({ error, data }) => request.log("info", {
 						hash: Weather.hash(data),
-						error: error.toLog()
+						error: error.toLog(),
+						message: "no data in cache so will use call the api"
 					}))
 					.ifRight(x => request.log("info", {
 						message: "got data from cache",
