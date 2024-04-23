@@ -41,13 +41,12 @@ export namespace Temperature {
 	type GetCache = (
 		weather: Weather.Request,
 		getCacheValue?: typeof TemperatureRepository.getCacheValue
-	) => Either<Weather.Request, WeatherRequestAndTemperature>
-
+	) => Either<{ error: HttpError, data: Weather.Request }, WeatherRequestAndTemperature>
 
 	export const getCache: GetCache =
 		(weather, getCacheValue = TemperatureRepository.getCacheValue) =>
 			getCacheValue(Weather.hash(weather))
-				.mapLeft(_ => weather)
+				.mapLeft(error => ({ error, data: weather }))
 				.map(temperature => ({ ...weather, ...temperature }))
 
 	export type SetCache = (

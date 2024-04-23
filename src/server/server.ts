@@ -19,25 +19,20 @@ const ip = (request: Hapi.Request) =>
 	request.info.remoteAddress;
 
 server.route({
-	method: "POST",
+	method: "GET",
 	path: "/weather",
-	options: {
-		payload: {
-			allow: "application/json"
-		},
-	},
 	handler: async (request) => {
 		request.log("info", "new incoming request")
 
 		let result = await EitherAsync.liftEither(
-			Weather.validation(request.payload))
+			Weather.validation(request.query))
 			.ifLeft(() => request.log("info", {
 				message: "validation failed with payload",
 				data: request.payload
 			}))
 			.ifRight(() => request.log("info", {
 				message: "payload validated",
-				data: request.payload
+				data: request.query
 			}))
 			.ifRight(() => request.log("info", {
 				message: "checking rate limit.",
@@ -52,15 +47,22 @@ server.route({
 					.map(_ => x))
 			.chain(x =>
 				EitherAsync.liftEither(Temperature.getCache(x))
-					.ifLeft(() => request.log("info", "no data in cache the api will be used"))
+					.ifLeft(({ error, data }) => request.log("info", {
+						hash: Weather.hash(data),
+						error: error.toLog()
+					}))
 					.ifRight(x => request.log("info", {
 						message: "got data from cache",
 						data: x
 					}))
-					.chainLeft(x =>
-						Temperature.Api(x)
+					.chainLeft(({ data }) =>
+						Temperature.Api(data)
 							.ifRight(() => request.log("info", "set the data in cache"))
-							.ifRight(Temperature.setCache)
+							.ifRight(x => Temperature.setCache(x)
+								.ifLeft((error) => request.log("error", {
+									message: "error when inserting datai in cache",
+									error: error.toLog()
+								})))
 					)
 			).run()
 
@@ -88,11 +90,11 @@ server.route({
 
 const logMessage = (event: RequestEvent) => typeof event === "string" ?
 	event :
-	JSON.stringify({
+	{
 		request: (event as any).request,
 		timestamp: event.timestamp,
 		data: event.data
-	})
+	}
 
 server.events.on('log', (event, tags) =>
 	logger[tags.error ? "error" : "info"](logMessage(event))

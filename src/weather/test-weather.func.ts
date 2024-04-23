@@ -34,29 +34,15 @@ describe("weather api", () => {
 		})
 	});
 
-	it('responds with 400 when the request is not a valid json', async () => {
-		const res = await server.inject({
-			method: 'post',
-			url: '/weather',
-			payload: "bad"
+	it('responds with 422 when the payload is not valid', async () => {
+		const params = new URLSearchParams({
+			city: '',
+			date: new Date().toISOString(),
 		});
 
-		assert.equal(res.statusCode, 400);
-		assert.deepEqual(JSON.parse(res.payload), {
-			statusCode: 400,
-			message: "Invalid request payload JSON format",
-			error: "Bad Request"
-		})
-	});
-
-	it('responds with 422 when the payload is not valid', async () => {
 		const res = await server.inject({
-			method: 'post',
-			url: '/weather',
-			payload: {
-				city: "",
-				date: new Date().toISOString()
-			},
+			method: 'get',
+			url: '/weather?' + params.toString(),
 		});
 
 		assert.deepEqual(JSON.parse(res.payload), {
@@ -71,14 +57,14 @@ describe("weather api", () => {
 			city: "San francisco",
 			date: "2024-02-22T14:48:00.000Z"
 		}
+		const params = new URLSearchParams(payload)
 
 		const res = await server.inject({
-			method: 'post',
-			url: '/weather',
+			method: 'get',
+			url: '/weather?' + params,
 			headers: {
 				"x-real-ip": randomIp()
 			},
-			payload,
 		});
 
 		assert.deepEqual(JSON.parse(res.payload), {
@@ -94,29 +80,66 @@ describe("weather api", () => {
 		}));
 	})
 
+	it('use the api when the cache is outdated', async () => {
+		const payload = {
+			city: "San francisco",
+			date: "2024-02-22T14:48:00.000Z"
+		}
+
+		const expired = new Date()
+		expired.setMinutes(expired.getMinutes() - 11)
+
+		TemperatureRepository.setCacheValue(Weather.hash(payload), {
+			celcius: 10,
+			fahrenheit: 50,
+			expiration: expired.toISOString()
+		})
+
+		let fromCache = false
+
+		server.events.on("request", (_, event) => {
+			if ((event as any).data.message == "got data from cache") {
+				fromCache = true
+			}
+		})
+
+		const params = new URLSearchParams(payload)
+
+		await server.inject({
+			method: 'get',
+			url: '/weather?' + params,
+			headers: {
+				"x-real-ip": randomIp()
+			},
+		});
+
+		assert.ok(!fromCache)
+	})
+
 	it('responds with 200 with the data from cache', async () => {
 		const payload = {
 			city: "San francisco",
 			date: new Date().toISOString()
 		}
 
+		const params = new URLSearchParams(payload)
+
 		TemperatureRepository.setCacheValue(Weather.hash(payload), { celcius: 10, fahrenheit: 50 })
 
 		let fromCache = false
 
-		server.events.on("request", (request, event, tags) => {
+		server.events.on("request", (_, event) => {
 			if ((event as any).data.message == "got data from cache") {
 				fromCache = true
 			}
 		})
 
 		const res = await server.inject({
-			method: 'post',
-			url: '/weather',
+			method: 'get',
+			url: '/weather?' + params,
 			headers: {
 				"x-real-ip": randomIp()
 			},
-			payload,
 		});
 
 		assert.ok(fromCache)
@@ -132,22 +155,25 @@ describe("weather api", () => {
 			date: new Date().toISOString()
 		}
 
+		TemperatureRepository.setCacheValue(Weather.hash(payload), { celcius: 10, fahrenheit: 50 })
+
+		const params = new URLSearchParams(payload)
+
 		const ip = randomIp()
 
 		const callApi = () => server.inject({
-			method: 'post',
-			url: '/weather',
+			method: 'get',
+			url: '/weather?' + params,
 			headers: {
 				"x-real-ip": ip
 			},
-			payload,
 		});
 
-		// Cache the first call
 		await callApi()
-
-		// Run 4 calls to reach the limit
-		await Promise.all([callApi(), callApi(), callApi(), callApi()])
+		await callApi()
+		await callApi()
+		await callApi()
+		await callApi()
 
 		const res = await callApi()
 

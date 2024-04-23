@@ -23,13 +23,22 @@ describe('weather request', () => {
 		assert.deepEqual(result, Left(new HttpError(422, "Invalid fields: date")))
 	})
 
-
 	it("return the weather when the data are valid", () => {
 		const date = new Date().toISOString()
 		const result = Weather.validation({ city: "San francisco", date })
 
 		assert.deepEqual(result, Right({
 			city: "San francisco",
+			date
+		}))
+	})
+
+	it("return the weather when the data are valid and city contains US state", () => {
+		const date = new Date().toISOString()
+		const result = Weather.validation({ city: "NY - Austin", date })
+
+		assert.deepEqual(result, Right({
+			city: "NY - Austin",
 			date
 		}))
 	})
@@ -60,7 +69,7 @@ describe("temperature cache", () => {
 	})
 
 	it("return the weather request data when the temperature is not in cache", () => {
-		const getCacheValue = (_: String) => Left(null)
+		const getCacheValue = (_: String) => Left(new HttpError(404, "no data found in cache"))
 
 		const result = Temperature.getCache({
 			city: "San francisco",
@@ -68,8 +77,11 @@ describe("temperature cache", () => {
 		}, getCacheValue)
 
 		assert.deepEqual(result, Left({
-			city: "San francisco",
-			date: "2024-04-22T14:48:00.000Z",
+			error: new HttpError(404, "no data found in cache"),
+			data: {
+				city: "San francisco",
+				date: "2024-04-22T14:48:00.000Z",
+			}
 		}))
 	})
 })
