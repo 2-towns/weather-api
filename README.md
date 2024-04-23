@@ -74,6 +74,8 @@ Start the server (in watching mode):
 npm run start  
 ```
 
+The server is running on port 3000. 
+
 ## Usage
 
 The api is accessible through a GET method `/weather` using two GET parameters: `city` and `date` in ISO8601 format. Example: `/weather?city=San%20francisco&date=2024-04-21T10:00:00.000Z`. 
@@ -111,7 +113,6 @@ Otherwise you will need to run the build phase before:
 npm run build
 ```
 
-
 ## Documentation 
 
 ### Error catching
@@ -145,6 +146,10 @@ When the API call is successful, an MD5 hash is generated from the city and the 
 ### Rate Limiter
 
 Redis was used to implement the rate limiter with a sorted set data structure. Every time a request is made and not in cache, a new record will be added to the sorted set, and the current API call count will be returned. If the limit (defined in the config) is reached, a 429 error will be returned.
+
+### Repository 
+
+I used repository for interacting with cache and database which allows to switch to other engines easily if needed. 
 
 ### Improvements
 

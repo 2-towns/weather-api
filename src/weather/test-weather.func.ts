@@ -61,7 +61,7 @@ describe("weather api", () => {
 
 		const res = await server.inject({
 			method: 'get',
-			url: '/weather?' + params,
+			url: '/weather?' + params.toString(),
 			headers: {
 				"x-real-ip": randomIp()
 			},
@@ -107,7 +107,7 @@ describe("weather api", () => {
 
 		await server.inject({
 			method: 'get',
-			url: '/weather?' + params,
+			url: '/weather?' + params.toString(),
 			headers: {
 				"x-real-ip": randomIp()
 			},
@@ -136,7 +136,7 @@ describe("weather api", () => {
 
 		const res = await server.inject({
 			method: 'get',
-			url: '/weather?' + params,
+			url: '/weather?' + params.toString(),
 			headers: {
 				"x-real-ip": randomIp()
 			},
@@ -157,7 +157,7 @@ describe("weather api", () => {
 			url: '/weather?' + new URLSearchParams({
 				city: "San francisco",
 				date: new Date().toISOString()
-			}),
+			}).toString(),
 			headers: {
 				"x-real-ip": ip
 			},
@@ -176,5 +176,35 @@ describe("weather api", () => {
 			message: 'Requests limit reached.',
 			statusCode: 429
 		});
+	})
+
+	it('does not affect the api rate when the cache is used', async () => {
+		const params = new URLSearchParams({
+			city: "San francisco",
+			date: new Date().toISOString()
+		})
+
+		const ip = randomIp()
+
+		const callApi = () => server.inject({
+			method: 'get',
+			url: '/weather?' + params.toString(),
+			headers: {
+				"x-real-ip": ip
+			},
+		});
+
+		await callApi()
+		await callApi()
+		await callApi()
+		await callApi()
+		await callApi()
+
+		const res = await callApi()
+
+		const json = JSON.parse(res.payload)
+
+		assert.ok(json.celcius)
+		assert.ok(json.fahrenheit)
 	})
 })
