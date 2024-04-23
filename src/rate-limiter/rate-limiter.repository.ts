@@ -17,7 +17,10 @@ export function StopRedis() {
 }
 
 export type RateLimitRepository = {
-	// Returns the previous value 
+	// Increment the api calls and retrieve the last 
+	// value. 
+	// The key will expire in Redis if there is no call 
+	// during X seconds. 
 	increment(ip: string): EitherAsync<HttpError, number>
 }
 

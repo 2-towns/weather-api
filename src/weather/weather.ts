@@ -1,100 +1,116 @@
 import crypto from "crypto"
-import { Either, EitherAsync, Left, Right } from "purify-ts"
+import { Either, EitherAsync, Left, Maybe, Right } from "purify-ts"
 import { z } from "zod"
 import { WEATHER_API_URL } from "../config/config.js"
 import { HttpError } from "../errors/errors.js"
-import { TemperatureRepository } from "./weather.repository.js"
+import { TemperatureRepository } from "./temperature.repository.js"
 
-export const WeatherRequest = z.object({
-	city: z.string().min(1),
-	date: z.string().datetime()
-})
+export namespace Weather {
+	export const request = z.object({
+		city: z.string().min(1),
+		date: z.string().datetime()
+	})
 
-export type WeatherRequest = z.infer<typeof WeatherRequest>
+	export type Request = z.infer<typeof Weather.request>
 
-export type Temperature = {
-	celcius: number
-	fahrenheit: number
+	export type Validation = (o: Object) => Either<HttpError, Weather.Request>
+
+	export const validation: Validation = o => {
+		let result = request.safeParse(o)
+		return result.success ?
+			Right(result.data) :
+			Left(new HttpError(422, "Invalid fields: " +
+				result.error.errors.map(error => error.path).join("")
+			))
+	}
+
+	export type Hash = (weather: Weather.Request) => string
+
+	export const hash: Hash = (weather) =>
+		crypto.createHash('md5').update(
+			weather.city.toLowerCase() + weather.date
+		).digest('hex')
 }
 
-type WeatherValidation = (o: Object) => Either<HttpError, WeatherRequest>
+export namespace Temperature {
+	export type Type = {
+		celcius: number
+		fahrenheit: number
+	}
 
-export const WeatherValidation: WeatherValidation = o => {
-	let result = WeatherRequest.safeParse(o)
-	return result.success ?
-		Right(result.data) :
-		Left(new HttpError(422, "Invalid fields: " +
-			result.error.errors.map(error => error.path).join("")
-		))
+	type GetCache = (
+		weather: Weather.Request,
+		getCacheValue?: typeof TemperatureRepository.getCacheValue
+	) => Either<Weather.Request, WeatherRequestAndTemperature>
+
+
+	export const getCache: GetCache =
+		(weather, getCacheValue = TemperatureRepository.getCacheValue) =>
+			getCacheValue(Weather.hash(weather))
+				.mapLeft(_ => weather)
+				.map(temperature => ({ ...weather, ...temperature }))
+
+	export type SetCache = (
+		data: WeatherRequestAndTemperature,
+		set?: typeof TemperatureRepository.setCacheValue
+	) => Either<HttpError, null>
+
+	export const setCache: SetCache = (
+		{ celcius, fahrenheit, city, date },
+		setCacheValue = TemperatureRepository.setCacheValue
+	) => setCacheValue(Weather.hash({ city, date }), { celcius, fahrenheit })
+
+	export const farhenheitToCelcius = (farhenheit: number) => Math.round(((farhenheit - 32) / 1.8) * 100) / 100
+	export const celciusToFarenheit = (celcius: number) => Math.round((celcius * 1.8 + 32) * 100) / 100
+
+	export type ApiResponse =
+		{ celcius?: number, fahrenheit: number } |
+		{ celcius: number, fahrenheit?: number } |
+		{ celcius: number, fahrenheit: number }
+
+	const isEmptyApiResponse = (json: ApiResponse) =>
+		Maybe.fromNullable(json.fahrenheit).alt(Maybe.fromNullable(json.celcius)).isNothing()
+
+	const callApi = (weather: Weather.Request) => fetch(WEATHER_API_URL, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify(weather)
+	})
+		.then(res => res.ok ?
+			Right(res) :
+			Left(new HttpError(500, res.statusText)))
+		.catch(e => Left(new HttpError(500, "Something went wrong.", e)))
+
+	export const Api = (weather: Weather.Request): EitherAsync<HttpError, WeatherRequestAndTemperature> =>
+		EitherAsync.fromPromise<HttpError, Response>(
+			() => callApi(weather))
+
+			// Retry once if the api returns an error 
+			.chainLeft(() => EitherAsync.fromPromise(() => callApi(weather)))
+
+			.chain(res => EitherAsync.fromPromise(
+				() => res.json()
+					.then((json) => isEmptyApiResponse(json as ApiResponse) ?
+						Left(new HttpError(500, "no data")) :
+						Right(json as ApiResponse)
+					)
+					.catch(_ => Left(new HttpError(500, "Something went wrong")))
+			)).map(json => {
+				const { celcius, fahrenheit } = json
+
+				return {
+					...weather,
+					celcius: Maybe.fromNullable(celcius).orDefault(farhenheitToCelcius(fahrenheit!)),
+					fahrenheit: Maybe.fromNullable(fahrenheit).orDefault(celciusToFarenheit(celcius!))
+				}
+			})
 }
 
-export type WeatherHash = (weather: WeatherRequest) => string
+export type WeatherRequestAndTemperature = Weather.Request & Temperature.Type
 
-export const WeatherHash: WeatherHash = (weather) =>
-	crypto.createHash('md5').update(
-		weather.city.toLowerCase() + weather.date
-	).digest('hex')
 
-export type GetTemperatureCache = (
-	weather: WeatherRequest,
-	getCacheValue?: typeof TemperatureRepository.getCacheValue
-) => Either<WeatherRequest, WeatherRequestAndTemperature>
 
-export const GetTemperatureCache: GetTemperatureCache =
-	(weather, getCacheValue = TemperatureRepository.getCacheValue) =>
-		getCacheValue(WeatherHash(weather))
-			.mapLeft(_ => weather)
-			.map(temperature => ({ ...weather, ...temperature }))
 
-export type WeatherRequestAndTemperature = WeatherRequest & Temperature
 
-export type SetTemperatureCache = (
-	data: WeatherRequestAndTemperature,
-	set?: typeof TemperatureRepository.setCacheValue
-) => Either<HttpError, null>
 
-export const SetTemperatureCache: SetTemperatureCache = (
-	{ celcius, fahrenheit, city, date },
-	setCacheValue = TemperatureRepository.setCacheValue
-) => setCacheValue(WeatherHash({ city, date }), { celcius, fahrenheit })
-
-export type TemperatureApiResponse =
-	{ celcius?: number, fahrenheit: number } |
-	{ celcius: number, fahrenheit?: number } |
-	{ celcius: number, fahrenheit: number }
-
-export const FarhenheitToCelcius = (farhenheit: number) => Math.round(((farhenheit - 32) / 1.8) * 100) / 100
-
-export const CelciusToFarenheit = (celcius: number) => Math.round((celcius * 1.8 + 32) * 100) / 100
-
-const IsEmptyApiResponse = (json: TemperatureApiResponse) => json.fahrenheit === undefined && json.celcius === undefined
-
-export const TemperatureApi = (weather: WeatherRequest): EitherAsync<HttpError, WeatherRequestAndTemperature> =>
-	EitherAsync.fromPromise<HttpError, Response>(
-		() => fetch(WEATHER_API_URL, {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(weather)
-		})
-			.then(res => res.ok ?
-				Right(res) :
-				Left(new HttpError(500, res.statusText)))
-			.catch(e => Left(new HttpError(500, "Something went wrong.", e)))
-	)
-		.chain(res => EitherAsync.fromPromise(
-			() => res.json()
-				.then((json) => IsEmptyApiResponse(json as TemperatureApiResponse) ?
-					Left(new HttpError(500, "no data")) :
-					Right(json as TemperatureApiResponse)
-				)
-				.catch(_ => Left(new HttpError(500, "Something went wrong")))
-		)).map(json => {
-			const { celcius, fahrenheit } = json
-
-			return {
-				...weather,
-				celcius: celcius !== undefined ? celcius : FarhenheitToCelcius(fahrenheit!),
-				fahrenheit: fahrenheit !== undefined ? fahrenheit : CelciusToFarenheit(celcius!)
-			}
-		})
 

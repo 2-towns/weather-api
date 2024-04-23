@@ -4,16 +4,15 @@ import { EitherAsync } from "purify-ts"
 import tracer from "tracer"
 import { CheckRateLimit } from "../rate-limiter/rate-limiter.js"
 import { StartRedis, StopRedis } from "../rate-limiter/rate-limiter.repository.js"
-import { GetTemperatureCache, SetTemperatureCache, TemperatureApi, WeatherValidation } from "../weather/weather.js"
+import { Temperature, Weather } from "../weather/weather.js"
 
-const logger = tracer.console();
+const logger = tracer.colorConsole();
 
 const server = Hapi.server(
 	{
 		port: 3000,
 		host: "localhost"
 	})
-
 
 const ip = (request: Hapi.Request) =>
 	request.headers['x-real-ip'] ||
@@ -27,11 +26,11 @@ server.route({
 			allow: "application/json"
 		},
 	},
-	handler: async (request, h) => {
+	handler: async (request) => {
 		request.log("info", "new incoming request")
 
 		let result = await EitherAsync.liftEither(
-			WeatherValidation(request.payload))
+			Weather.validation(request.payload))
 			.ifLeft(() => request.log("info", {
 				message: "validation failed with payload",
 				data: request.payload
@@ -46,21 +45,31 @@ server.route({
 			}))
 			.chain(x =>
 				CheckRateLimit(ip(request))
-					.ifRight(calls => request.log("info", { message: "api calls", calls }))
+					.ifRight(calls => request.log("info", {
+						message: "api calls",
+						calls
+					}))
 					.map(_ => x))
 			.chain(x =>
-				EitherAsync.liftEither(GetTemperatureCache(x))
+				EitherAsync.liftEither(Temperature.getCache(x))
 					.ifLeft(() => request.log("info", "no data in cache the api will be used"))
-					.ifRight(x => request.log("info", { message: "got data from cache", data: x }))
-					.chainLeft(x => TemperatureApi(x)
-						.ifRight(() => request.log("info", "set the data in cache"))
-						.ifRight(SetTemperatureCache)
+					.ifRight(x => request.log("info", {
+						message: "got data from cache",
+						data: x
+					}))
+					.chainLeft(x =>
+						Temperature.Api(x)
+							.ifRight(() => request.log("info", "set the data in cache"))
+							.ifRight(Temperature.setCache)
 					)
 			).run()
 
 		result.ifLeft(error => request.log("error", error.toLog()))
 
-		return result.map(data => ({ celcius: data.celcius, fahrenheit: data.fahrenheit }))
+		return result.map(({ celcius, fahrenheit }) => ({
+			celcius,
+			fahrenheit
+		}))
 	}
 })
 
@@ -69,14 +78,24 @@ server.route({
 	method: '*',
 	path: '/{any*}',
 	handler: function (_, h) {
-		return h.response({ statusCode: 404, error: http.STATUS_CODES[404], message: "the path is not found" }).code(404);
+		return h.response({
+			statusCode: 404,
+			error: http.STATUS_CODES[404],
+			message: "the path is not found"
+		}).code(404);
 	}
 });
 
-const logMessage = (event: RequestEvent) => typeof event === "string" ? event : JSON.stringify({ request: (event as any).request, timestamp: event.timestamp, data: event.data })
+const logMessage = (event: RequestEvent) => typeof event === "string" ?
+	event :
+	JSON.stringify({
+		request: (event as any).request,
+		timestamp: event.timestamp,
+		data: event.data
+	})
 
 server.events.on('log', (event, tags) =>
-	logger[tags.info ? "info" : "error"](logMessage(event))
+	logger[tags.error ? "error" : "info"](logMessage(event))
 );
 
 server.events.on('request', (_, event, tags) =>

@@ -1,5 +1,6 @@
 CREATE TABLE IF NOT EXISTS temperature_cache(
-   key CHAR(32) PRIMARY KEY,
+   key TEXT PRIMARY KEY,
    celcius FLOAT,
-   fahrenheit FLOAT 
+   fahrenheit FLOAT,
+   expiration TEXT
 );
