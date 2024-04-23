@@ -36,13 +36,13 @@ server.route({
 			}))
 			.ifRight(() => request.log("info", {
 				message: "checking cache value.",
-				ip: ip(request),
 			}))
 			.chain(x =>
 				EitherAsync.liftEither(Temperature.getCache(x))
 					.ifLeft(({ error, data }) => request.log("info", {
 						hash: Weather.hash(data),
 						error: error.toLog(),
+						ip: ip(request),
 						message: "no data in cache so will use call the api"
 					}))
 					.ifRight(x => request.log("info", {
