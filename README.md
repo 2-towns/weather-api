@@ -50,6 +50,12 @@ Install the dependencies:
 npm install  
 ```
 
+Create a .env: 
+
+```sh
+touch .env
+```
+
 Start the Typescript watching mode: 
 
 ```sh

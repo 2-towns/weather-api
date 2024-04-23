@@ -14,4 +14,3 @@ export const {
 	WEATHER_CACHE_DURATION_IN_SEC: z.number().optional().default(60 * 10),
 })
 
-
