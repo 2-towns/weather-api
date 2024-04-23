@@ -1,12 +1,12 @@
-import { StartRedis } from "./rate-limiter/rate-limiter.repository.js";
-import { ServerStart, ServerStop } from "./server/server.js";
+import { Cache } from "./rate-limiter/rate-limiter.repository.js";
+import { Server } from "./server/server.js";
 
-await StartRedis()
+await Cache.start()
 
-await ServerStart()
+await Server.start()
 
 process.on('unhandledRejection', async (err) => {
-	await ServerStop()
+	await Server.stop()
 	console.error(err)
 	process.exit(1);
 });

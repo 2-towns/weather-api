@@ -2,7 +2,7 @@ import assert from "node:assert";
 import { describe, it } from "node:test";
 import { EitherAsync, Left, Right } from "purify-ts";
 import { HttpError } from "../errors/errors.js";
-import { CheckRateLimit } from "./rate-limiter.js";
+import { RateLimiter } from "./rate-limiter.js";
 
 describe('rate limiter', () => {
 	it("returns an error when checking the ip and the repository fails", async () => {
@@ -10,7 +10,7 @@ describe('rate limiter', () => {
 			Left(new HttpError(500, "Something went wrong."))
 		)
 
-		const result = await CheckRateLimit("127.0.0.1", increment).run()
+		const result = await RateLimiter.check("127.0.0.1", increment).run()
 
 		assert.deepEqual(result, Left(new HttpError(500, "Something went wrong.")))
 	})
@@ -20,7 +20,7 @@ describe('rate limiter', () => {
 		const increment = (_: string) => EitherAsync.liftEither(Right(2))
 
 		const limit = 1
-		const result = await CheckRateLimit("127.0.0.1", increment, limit).run()
+		const result = await RateLimiter.check("127.0.0.1", increment, limit).run()
 
 		assert.deepEqual(result, Left(new HttpError(429, "Requests limit reached.")))
 	})
@@ -30,7 +30,7 @@ describe('rate limiter', () => {
 		const increment = (_: string) => EitherAsync.liftEither(Right(1))
 
 		const limit = 2
-		const result = await CheckRateLimit("127.0.0.1", increment, limit).run()
+		const result = await RateLimiter.check("127.0.0.1", increment, limit).run()
 
 		assert.deepEqual(result, Right(1))
 	})

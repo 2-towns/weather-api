@@ -2,7 +2,7 @@ import Hapi from "@hapi/hapi";
 import assert from "node:assert";
 import { afterEach, beforeEach, describe, it } from "node:test";
 import { Right } from "purify-ts";
-import { ServerInit, ServerStop } from "../server/server.js";
+import { Server } from "../server/server.js";
 import { TemperatureRepository } from "./temperature.repository.js";
 import { Weather } from "./weather.js";
 
@@ -13,11 +13,11 @@ describe("weather api", () => {
 	let server: Hapi.Server;
 
 	beforeEach(async () => {
-		server = await ServerInit();
+		server = await Server.init();
 	});
 
 	afterEach(async () => {
-		await ServerStop();
+		await Server.stop();
 	});
 
 	it('responds with 404 when the request is not found', async () => {

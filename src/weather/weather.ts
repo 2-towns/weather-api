@@ -93,7 +93,7 @@ export namespace Temperature {
 						Left(new HttpError(500, "no data")) :
 						Right(json as ApiResponse)
 					)
-					.catch(_ => Left(new HttpError(500, "Something went wrong")))
+					.catch(e => Left(new HttpError(500, "Something went wrong", e)))
 			)).map(json => {
 				const { celcius, fahrenheit } = json
 

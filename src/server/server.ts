@@ -11,7 +11,7 @@ const logger = tracer.colorConsole();
 const server = Hapi.server(
 	{
 		port: 3000,
-		host: "localhost"
+		host: '0.0.0.0'
 	})
 
 const ip = (request: Hapi.Request) =>
@@ -104,28 +104,31 @@ server.events.on('request', (_, event, tags) =>
 	logger[tags.info ? "info" : "error"](logMessage(event))
 );
 
-export async function ServerInit() {
-	await Cache.start()
+export namespace Server {
+	export async function init() {
+		await Cache.start()
 
-	await server.initialize()
+		await server.initialize()
 
-	return server
+		return server
+	}
+
+	export async function start() {
+		await server.start()
+
+		server.start().then(() => server.log("server started on port 3000"))
+
+		return server
+	}
+
+	export async function stop() {
+		await Cache.stop()
+		await server.stop()
+
+		return server
+	}
 }
 
-export async function ServerStart() {
-	await server.start()
-
-	server.start().then(() => server.log("server started on port 3000"))
-
-	return server
-}
-
-export async function ServerStop() {
-	await Cache.stop()
-	await server.stop()
-
-	return server
-}
 
 
 
