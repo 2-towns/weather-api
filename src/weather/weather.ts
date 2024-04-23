@@ -78,10 +78,13 @@ export namespace Temperature {
 	const isEmptyApiResponse = (json: ApiResponse) =>
 		Maybe.fromNullable(json.fahrenheit).alt(Maybe.fromNullable(json.celcius)).isNothing()
 
-	const callApi = (weather: Weather.Request) => fetch(WEATHER_API_URL, {
+	const callApi = ({ location, date }: Weather.Request) => fetch(WEATHER_API_URL, {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify(weather)
+		body: JSON.stringify({
+			city: location,
+			date
+		})
 	})
 		.then(res => res.ok ?
 			Right(res) :
