@@ -96,16 +96,15 @@ In case of errors, the following format is sent:
 If the project is built or the TypeScript watch mode is running, run:
 
 ```sh 
-npm run test:dev
-```
-
-Otherwise use: 
-
-```sh 
 npm run test
 ```
 
-It will run a build phase before running the tests. 
+Otherwise you will need to run the build phase before: 
+
+```sh 
+npm run build
+```
+
 
 ## Documentation 
 

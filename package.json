@@ -10,9 +10,7 @@
     "compile": "tsc --noEmit",
     "migration": "node dist/db/migration.js",
     "start": "node --watch dist/index.js",
-    "pretest":"npm run build",
-    "test": "node --test dist/",
-    "test:dev": "node --test dist/"
+    "test": "node --test dist/"
   },
   "repository": {
     "type": "git",
