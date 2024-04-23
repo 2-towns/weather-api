@@ -7,7 +7,7 @@ import { TemperatureRepository } from "./temperature.repository.js"
 
 export namespace Weather {
 	export const request = z.object({
-		city: z.string().min(1),
+		location: z.string().min(1),
 		date: z.string().datetime()
 	}).strict()
 
@@ -36,7 +36,7 @@ export namespace Weather {
 
 	export const hash: Hash = (weather) =>
 		crypto.createHash('md5').update(
-			weather.city.toLowerCase() + weather.date
+			weather.location.toLowerCase() + weather.date
 		).digest('hex')
 }
 
@@ -63,9 +63,9 @@ export namespace Temperature {
 	) => Either<HttpError, null>
 
 	export const setCache: SetCache = (
-		{ celcius, fahrenheit, city, date },
+		{ celcius, fahrenheit, location, date },
 		setCacheValue = TemperatureRepository.setCacheValue
-	) => setCacheValue(Weather.hash({ city, date }), { celcius, fahrenheit })
+	) => setCacheValue(Weather.hash({ location, date }), { celcius, fahrenheit })
 
 	export const farhenheitToCelcius = (farhenheit: number) => Math.round(((farhenheit - 32) / 1.8) * 100) / 100
 	export const celciusToFarenheit = (celcius: number) => Math.round((celcius * 1.8 + 32) * 100) / 100

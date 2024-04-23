@@ -1,6 +1,6 @@
 # Weather API 
 
-This is a technical test using a weather API to display the temperature of a city for a specific date.
+This is a technical test using a weather API to display the temperature of a location for a specific date.
 
 # Setup 
 
@@ -78,7 +78,7 @@ The server is running on port 3000.
 
 ## Usage
 
-The api is accessible through a GET method `/weather` using two GET parameters: `city` and `date` in ISO8601 format. Example: `/weather?city=San%20francisco&date=2024-04-21T10:00:00.000Z`. 
+The api is accessible through a GET method `/weather` using two GET parameters: `location` and `date` in ISO8601 format. Example: `/weather?location=San%20francisco&date=2024-04-21T10:00:00.000Z`. 
 
 The success result is a JSON object containing the Celsius and Fahrenheit values. Example:
 
@@ -139,9 +139,9 @@ I didn't want to use mocks because mocks come with some tradeoffs, like inconsis
 
 ### Caching
 
-When a request is made, it will first check if a record exists for the MD5 generated from the city and date and that the expiration duration is not reached. In this case, the cached value will be sent; otherwise, the API will be called.
+When a request is made, it will first check if a record exists for the MD5 generated from the location and date and that the expiration duration is not reached. In this case, the cached value will be sent; otherwise, the API will be called.
 
-When the API call is successful, an MD5 hash is generated from the city and the date, then inserted (or will replace the current values) into the SQLite database, along with the corresponding temperature data (celsius and fahrenheit) and a date.
+When the API call is successful, an MD5 hash is generated from the location and the date, then inserted (or will replace the current values) into the SQLite database, along with the corresponding temperature data (celsius and fahrenheit) and a date.
 
 ### Rate Limiter
 

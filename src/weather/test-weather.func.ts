@@ -36,7 +36,7 @@ describe("weather api", () => {
 
 	it('responds with 422 when the payload is not valid', async () => {
 		const params = new URLSearchParams({
-			city: '',
+			location: '',
 			date: new Date().toISOString(),
 		});
 
@@ -47,14 +47,14 @@ describe("weather api", () => {
 
 		assert.deepEqual(JSON.parse(res.payload), {
 			error: 'Unprocessable Entity',
-			message: 'Invalid fields: city',
+			message: 'Invalid fields: location',
 			statusCode: 422,
 		});
 	})
 
 	it('responds with 200 and stores in cache when the payload is valid', async () => {
 		const payload = {
-			city: "San francisco",
+			location: "San francisco",
 			date: "2024-02-22T14:48:00.000Z"
 		}
 		const params = new URLSearchParams(payload)
@@ -82,7 +82,7 @@ describe("weather api", () => {
 
 	it('use the api when the cache is outdated', async () => {
 		const payload = {
-			city: "San francisco",
+			location: "San francisco",
 			date: "2024-02-22T14:48:00.000Z"
 		}
 
@@ -118,7 +118,7 @@ describe("weather api", () => {
 
 	it('responds with 200 with the data from cache', async () => {
 		const payload = {
-			city: "San francisco",
+			location: "San francisco",
 			date: new Date().toISOString()
 		}
 
@@ -155,7 +155,7 @@ describe("weather api", () => {
 		const callApi = () => server.inject({
 			method: 'get',
 			url: '/weather?' + new URLSearchParams({
-				city: "San francisco",
+				location: "San francisco",
 				date: new Date().toISOString()
 			}).toString(),
 			headers: {
@@ -180,7 +180,7 @@ describe("weather api", () => {
 
 	it('does not affect the api rate when the cache is used', async () => {
 		const params = new URLSearchParams({
-			city: "San francisco",
+			location: "San francisco",
 			date: new Date().toISOString()
 		})
 

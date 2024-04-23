@@ -61,7 +61,7 @@ server.route({
 									.ifRight(() => request.log("info", "set the data in cache"))
 									.ifRight(x => Temperature.setCache(x)
 										.ifLeft((error) => request.log("error", {
-											message: "error when inserting datai in cache",
+											message: "error when inserting data in cache",
 											error: error.toLog()
 										}))
 									)
