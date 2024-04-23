@@ -150,20 +150,14 @@ describe("weather api", () => {
 	})
 
 	it('responds with 429 when the rate limit is reached', async () => {
-		const payload = {
-			city: "San francisco",
-			date: new Date().toISOString()
-		}
-
-		TemperatureRepository.setCacheValue(Weather.hash(payload), { celcius: 10, fahrenheit: 50 })
-
-		const params = new URLSearchParams(payload)
-
 		const ip = randomIp()
 
 		const callApi = () => server.inject({
 			method: 'get',
-			url: '/weather?' + params,
+			url: '/weather?' + new URLSearchParams({
+				city: "San francisco",
+				date: new Date().toISOString()
+			}),
 			headers: {
 				"x-real-ip": ip
 			},

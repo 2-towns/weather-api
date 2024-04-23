@@ -1,6 +1,6 @@
 import crypto from "crypto"
 import { Either, EitherAsync, Left, Maybe, Right } from "purify-ts"
-import { z } from "zod"
+import { ZodError, z } from "zod"
 import { WEATHER_API_URL } from "../config/config.js"
 import { HttpError } from "../errors/errors.js"
 import { TemperatureRepository } from "./temperature.repository.js"
@@ -9,18 +9,26 @@ export namespace Weather {
 	export const request = z.object({
 		city: z.string().min(1),
 		date: z.string().datetime()
-	})
+	}).strict()
 
 	export type Request = z.infer<typeof Weather.request>
 
 	export type Validation = (o: Object) => Either<HttpError, Weather.Request>
 
+
+	const zodErrorToString = (error: ZodError) => {
+		const paths = error.errors.map(error => error.path).join("")
+
+		return !paths ? "" : ": " + paths
+	}
+
+
 	export const validation: Validation = o => {
 		let result = request.safeParse(o)
 		return result.success ?
 			Right(result.data) :
-			Left(new HttpError(422, "Invalid fields: " +
-				result.error.errors.map(error => error.path).join("")
+			Left(new HttpError(422, "Invalid fields" +
+				zodErrorToString(result.error)
 			))
 	}
 

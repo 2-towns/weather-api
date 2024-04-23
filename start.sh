@@ -1,11 +1,7 @@
 #!/bin/bash 
 
+touch .env 
+
 redis-server & 
 
-node dist/index.js 
-
-# Wait for any process to exit
-wait -n
-
-# Exit with status of process that exited first
-exit $?
+node --env-file=.env dist/index.js 

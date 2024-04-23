@@ -4,7 +4,7 @@ import { Left, Right } from "purify-ts";
 import { HttpError } from "../errors/errors.js";
 import { Temperature, Weather } from "./weather.js";
 
-describe('weather request', () => {
+describe.only('weather request', () => {
 	it("does not pass the validation when the city is missing", () => {
 		const result = Weather.validation({ city: "", date: new Date().toISOString() })
 
@@ -17,10 +17,16 @@ describe('weather request', () => {
 		assert.deepEqual(result, Left(new HttpError(422, "Invalid fields: date")))
 	})
 
-	it("does not pass the validation when the date format is not iso8601", () => {
-		const result = Weather.validation({ city: "San francisco", date: new Date().toString() })
+	it.only("does not pass the validation when the date format is not iso8601", () => {
+		const result = Weather.validation({ city: "San francisco", date: new Date().toUTCString() })
 
 		assert.deepEqual(result, Left(new HttpError(422, "Invalid fields: date")))
+	})
+
+	it.only("does not pass the validation when there is an extra fields", () => {
+		const result = Weather.validation({ city: "San francisco", date: new Date().toISOString(), hello: "world" })
+
+		assert.deepEqual(result, Left(new HttpError(422, "Invalid fields")))
 	})
 
 	it("return the weather when the data are valid", () => {

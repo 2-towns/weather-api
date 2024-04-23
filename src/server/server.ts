@@ -39,13 +39,6 @@ server.route({
 				ip: ip(request),
 			}))
 			.chain(x =>
-				RateLimiter.check(ip(request))
-					.ifRight(calls => request.log("info", {
-						message: "api calls",
-						calls
-					}))
-					.map(_ => x))
-			.chain(x =>
 				EitherAsync.liftEither(Temperature.getCache(x))
 					.ifLeft(({ error, data }) => request.log("info", {
 						hash: Weather.hash(data),
@@ -56,13 +49,22 @@ server.route({
 						data: x
 					}))
 					.chainLeft(({ data }) =>
-						Temperature.Api(data)
-							.ifRight(() => request.log("info", "set the data in cache"))
-							.ifRight(x => Temperature.setCache(x)
-								.ifLeft((error) => request.log("error", {
-									message: "error when inserting datai in cache",
-									error: error.toLog()
-								})))
+						RateLimiter.check(ip(request))
+							.ifRight(calls => request.log("info", {
+								message: "api calls",
+								calls
+							}))
+							.map(_ => data)
+							.chain(data =>
+								Temperature.Api(data)
+									.ifRight(() => request.log("info", "set the data in cache"))
+									.ifRight(x => Temperature.setCache(x)
+										.ifLeft((error) => request.log("error", {
+											message: "error when inserting datai in cache",
+											error: error.toLog()
+										}))
+									)
+							)
 					)
 			).run()
 
