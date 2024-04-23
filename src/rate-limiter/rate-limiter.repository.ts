@@ -5,15 +5,16 @@ import { HttpError } from "../errors/errors.js";
 
 let client: ReturnType<typeof createClient>
 
-export async function StartRedis() {
-	client = await createClient()
-		.on('error', err => console.log('Redis Client Error', err))
-		.connect();
-}
+export namespace Cache {
+	export async function start() {
+		client = await createClient()
+			.on('error', err => console.log('Redis Client Error', err))
+			.connect();
+	}
 
-
-export function StopRedis() {
-	return client.quit()
+	export function stop() {
+		return client.quit()
+	}
 }
 
 export type RateLimitRepository = {

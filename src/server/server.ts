@@ -2,8 +2,8 @@ import Hapi, { RequestEvent } from "@hapi/hapi"
 import http from "http"
 import { EitherAsync } from "purify-ts"
 import tracer from "tracer"
-import { CheckRateLimit } from "../rate-limiter/rate-limiter.js"
-import { StartRedis, StopRedis } from "../rate-limiter/rate-limiter.repository.js"
+import { RateLimiter } from "../rate-limiter/rate-limiter.js"
+import { Cache } from "../rate-limiter/rate-limiter.repository.js"
 import { Temperature, Weather } from "../weather/weather.js"
 
 const logger = tracer.colorConsole();
@@ -39,7 +39,7 @@ server.route({
 				ip: ip(request),
 			}))
 			.chain(x =>
-				CheckRateLimit(ip(request))
+				RateLimiter.check(ip(request))
 					.ifRight(calls => request.log("info", {
 						message: "api calls",
 						calls
@@ -105,7 +105,7 @@ server.events.on('request', (_, event, tags) =>
 );
 
 export async function ServerInit() {
-	await StartRedis()
+	await Cache.start()
 
 	await server.initialize()
 
@@ -121,7 +121,7 @@ export async function ServerStart() {
 }
 
 export async function ServerStop() {
-	await StopRedis()
+	await Cache.stop()
 	await server.stop()
 
 	return server
