@@ -56,11 +56,11 @@ Create a .env:
 touch .env
 ```
 
-Start the Typescript watching mode: 
+Start the Typescript watching mode in another terminal: 
 
 ```sh
 npm run watch  
-``
+```
 
 Run the migration (first time only): 
 
